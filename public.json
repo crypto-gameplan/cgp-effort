@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.7.0",
+    "date": "2026-10-12",
+    "note": "More room above the bar",
+    "detail": "The CGP Crew and CGP Follow-ups rows now sit apart from the effort bar on the desktop instead of touching it.",
+    "public": true
+  },
+  {
     "version": "1.6.0",
     "date": "2026-10-12",
     "note": "CGP Follow-ups in the bar",

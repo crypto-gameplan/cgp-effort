@@ -1,6 +1,6 @@
 # CGP Effort guide
 
-Version 1.6.1, updated 2026-10-12. This guide describes that version; a newer plugin may differ in details.
+Version 1.7.0, updated 2026-10-12. This guide describes that version; a newer plugin may differ in details.
 
 This is the reference for CGP Effort, a Claude Code plugin by Crypto Gameplan. An agent that is asked how the plugin works should answer from this file. Names in quotes are the words the person sees in the app, so they can find them.
 
