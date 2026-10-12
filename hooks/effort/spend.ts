@@ -2,7 +2,7 @@
 import type { Spent } from '../../types'
 import { EFFORT_LABELS, EFFORTS, WEIGHT } from '../core/models'
 
-export const EMPTY_SPENT: Spent = { prompts: 0, requests: 0, input: 0, write: 0, read: 0, out: 0, byEffort: {}, judge: { jev: 0, haiku: 0, ms: 0, tokens: 0 }, moved: 0, redone: 0 }
+export const EMPTY_SPENT: Spent = { prompts: 0, requests: 0, input: 0, write: 0, read: 0, out: 0, byEffort: {}, judge: { jev: 0, haiku: 0, ms: 0, tokens: 0 }, moved: 0, redone: 0, routeSaved: 0, helpers: { runs: {}, requests: 0, cost: 0 } }
 /** Read every stored tally through this: a hot reload can keep state an older version wrote. */
 export function asSpent(t: unknown): Spent {
   const v = (t ?? {}) as Partial<Spent>
@@ -19,6 +19,7 @@ export function asSpent(t: unknown): Spent {
     judge: { jev: num(judged.jev), haiku: num(judged.haiku), ms: num(judged.ms), tokens: num(judged.tokens) },
     moved: num(v.moved),
     redone: num(v.redone),
+    routeSaved: num(v.routeSaved),
     helpers: {
       runs: v.helpers?.runs && typeof v.helpers.runs === 'object' ? v.helpers.runs : {},
       requests: num(v.helpers?.requests),
@@ -63,7 +64,8 @@ export function savedText(raw: Spent): string {
   })
   if (per.length) lines.push(`Per prompt: ${per.join('; ')}`)
   if (t.moved) {
-    lines.push(`Cheaper model: ${t.moved} prompt${t.moved === 1 ? '' : 's'} moved down, ${t.redone} redone (${share(t.redone, t.moved)})`)
+    const usd = t.routeSaved >= 1 ? `$${t.routeSaved.toFixed(2)}` : `${Math.round(t.routeSaved * 100)} cents`
+    lines.push(`Cheaper model: ${t.moved} prompt${t.moved === 1 ? '' : 's'} moved down, ${t.redone} redone (${share(t.redone, t.moved)}), about ${usd} saved`)
   }
   if (helperRuns) {
     const per = EFFORTS.filter(e => t.helpers.runs[e]).map(e => `${EFFORT_LABELS[e]} ${t.helpers.runs[e]}`)

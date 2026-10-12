@@ -1,6 +1,6 @@
 # CGP Effort guide
 
-Version 1.4.0, updated 2026-10-12. This guide describes that version; a newer plugin may differ in details.
+Version 1.4.1, updated 2026-10-12. This guide describes that version; a newer plugin may differ in details.
 
 This is the reference for CGP Effort, a Claude Code plugin by Crypto Gameplan. An agent that is asked how the plugin works should answer from this file. Names in quotes are the words the person sees in the app, so they can find them.
 
@@ -165,7 +165,13 @@ The settings open with ⚙ or `/cgp-effort settings`. Changes apply when "Save" 
 
 "Helpers" (off by default) lets the judge pick an effort for each subagent the chat starts, never below medium. With it off, subagents run at the effort of the turn that started them.
 
-"Cheaper when it can" in the Model card is experimental and off by default. It lets a prompt the judge calls simple run on Haiku 5.5 or Sonnet instead of the chat's model. It rarely pays in a chat that is in use, because each model keeps its own prompt cache and the other model first has to write the whole chat into its cache.
+"Cheaper when it can" in the Model card is experimental and off by default. It lets a prompt run on Haiku 5.5 or Sonnet instead of the chat's model when three things hold:
+
+- The judge rates the prompt easy (Low or Medium) and is sure of it.
+- Moving costs clearly less, by at least 10 %, over the whole turn. The plugin prices the turn on the current Claude API rates: reading the chat from cache or, when the other model's cache is cold, writing all of it first; each tool round; and the output. It uses how many requests and how much output this chat's recent turns had, and Haiku's higher rate for prompts over 100K tokens.
+- No answer from a cheaper model was just redone. A reply such as "no, that's wrong", "nein, das ist falsch" or "geht immer noch nicht" keeps the retry and the next four prompts on the chat's model.
+
+In practice a cold Sonnet almost never pays, because writing the chat costs more than it saves. Haiku pays from Fable, and from Opus once Haiku's cache is warm. `/cgp-effort stats` shows how many prompts moved, how many were redone and about how much they saved.
 
 "Animations" in Customize stops the moving art in the bar and the alerts. The drawings then stand still.
 

@@ -210,13 +210,15 @@ describe('auto', () => {
   })
 
   test('routeWorth: a switch to a cold model pays only when it still comes out cheaper', () => {
-    const big = 100_000
-    // Opus chat, cache warm: a cold Sonnet writes the whole chat and costs more; a warm Sonnet is far cheaper.
+    const big = 200_000
+    // Opus chat, cache warm: a cold Sonnet writes the whole chat and costs more; a warm Sonnet is cheaper.
     expect(routeWorth('sonnet', 'opus', big, { to: false, inUse: true })).toBe(false)
     expect(routeWorth('sonnet', 'opus', big, { to: true, inUse: true })).toBe(true)
-    // A cold Haiku writes the whole chat (a third of the price, 1.25 times) against a warm Opus read (twice the price, a tenth): still more.
+    // Over 100K tokens a cold Haiku pays its long-prompt rate to write the chat: about what Opus costs to stay, so it stays.
     expect(routeWorth('haiku', 'opus', big, { to: false, inUse: true })).toBe(false)
     expect(routeWorth('haiku', 'opus', big, { to: true, inUse: true })).toBe(true)
+    // Under 100K Haiku is so cheap that even writing the chat cold beats a warm Opus turn.
+    expect(routeWorth('haiku', 'opus', 80_000, { to: false, inUse: true })).toBe(true)
     // The chat's own cache gone cold: staying would write it all again on Opus, so Sonnet wins even cold.
     expect(routeWorth('sonnet', 'opus', big, { to: false, inUse: false })).toBe(true)
     // No context size known: route as before.
@@ -2998,11 +3000,12 @@ describe('dashboard', () => {
   test('cache-aware routing, live through the hooks: a cold Sonnet is skipped on a big warm Opus chat, Haiku moves, a cold chat moves, and a routed reply leaves the countdown alone', { ...LONG, options: { modelAuto: 'on' } } as never, async ($, on) => {
     engine(on)
     const mocked = mock.clock(on)
-    on('session.usage', () => ({ value: { context: { tokens: 100_000, window: 1_000_000, percent: 10 } } }) as never)
+    on('session.usage', () => ({ value: { context: { tokens: 200_000, window: 1_000_000, percent: 20 } } }) as never)
     let verdict = '{"model":"opus","effort":"high","why":"big refactor"}'
     on('model.complete', () => ({ value: { isAnswered: true as const, text: verdict, usage: USAGE } }))
     const sent: string[] = []
-    const used = { input_tokens: 5, output_tokens: 40, cache_read_input_tokens: 90_000, cache_creation_input_tokens: 10_000, cache_creation: { ephemeral_1h_input_tokens: 10_000 } }
+    // One request per turn writing 3K tokens: the output is where a cheaper model saves on a warm cache.
+    const used = { input_tokens: 5, output_tokens: 3000, cache_read_input_tokens: 190_000, cache_creation_input_tokens: 10_000, cache_creation: { ephemeral_1h_input_tokens: 10_000 } }
     on('turn.step', async function* (_$, e) {
       sent.push(e.model)
       return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: used } as never
@@ -3019,10 +3022,10 @@ describe('dashboard', () => {
     // A hard prompt on the chat's own model warms the Opus cache.
     await ask('{"model":"opus","effort":"high","why":"big refactor"}', 'refactor the whole auth layer')
     expect(sent.at(-1)).toBe('claude-opus-5-5')
-    // Sonnet has never answered: its cache is cold, and writing 100k tokens there costs more than reading them on Opus.
+    // Sonnet has never answered: its cache is cold, and writing 200k tokens there costs more than reading them on Opus.
     await ask('{"model":"sonnet","effort":"low","why":"small fix"}', 'rename this variable to userId')
     expect(sent.at(-1)).toBe('claude-opus-5-5')
-    // A cold Haiku loses to a warm Opus read as well, whatever the size of the chat.
+    // A cold Haiku over 100K tokens pays its long-prompt rate to write the chat: more than the warm Opus turn.
     await mocked.advance(30 * 60_000)
     await ask('{"model":"haiku","effort":"low","why":"lookup"}', 'what is the folder called')
     expect(sent.at(-1)).toBe('claude-opus-5-5')

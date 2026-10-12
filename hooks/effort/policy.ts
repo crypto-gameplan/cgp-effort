@@ -6,9 +6,12 @@ let lastFooter = ''
 // A reply saying the last answer was wrong. After a prompt ran on a cheaper model, the retry and the next few prompts
 // stay on the chat's own model.
 const REDO_RE = /^(no|nope|nah)(?![a-z'])(?! +(problem|worries|thanks|thank|need|rush|hurry))|^(that'?s |this is |it'?s )?(wrong|incorrect|not (right|correct|what i))|^(it |that |this )?(still )?(doesn'?t|didn'?t|isn'?t|does not|did not|is not) (work|fix|help|change|run|compile|pass)|^still (not|broken|wrong|failing|fails|the same|happening|doesn'?t)|^(not working|try again|do it again|redo|you missed|you forgot|you broke)|^(fel|inte rätt|funkar inte|fungerar inte|försök igen|gör om|det är fel)(?![a-zåäö])|(still (broken|wrong|failing)|try again|funkar fortfarande inte)/i
+// German: the same corrections, without "nein danke" or "kein Problem".
+const REDO_DE = /^(nein|ne|nö)(?![a-zäöüß])(?! *,? *(danke|passt|alles gut))|^(das )?(ist |war )?(falsch|nicht (richtig|korrekt|das,? was))|^(es |das )?(funktioniert|geht|klappt|läuft|kompiliert) (immer noch |noch |leider )?(nicht|nich)(?![a-zäöüß])|^(immer noch|noch immer) (nicht|kaputt|falsch|der(selbe)? fehler|das gleiche)|^(nochmal|noch mal|versuch(e|s)? es (noch ?mal|erneut)|mach(e|s)? es (noch ?mal|neu)|du hast .* (vergessen|übersehen|kaputt gemacht))(?![a-zäöüß])/i
 export const REDO_STAY_PROMPTS = 4
 export function looksLikeRedo(text: string): boolean {
-  return REDO_RE.test(text.trim().replace(/^["'“ ]+/, ''))
+  const said = text.trim().replace(/^["'“„ ]+/, '')
+  return REDO_RE.test(said) || REDO_DE.test(said)
 }
 /** The slider moves only unsure verdicts, one step; its outer stops count more verdicts as unsure. */
 export function tipped(effort: Effort, sure: number | undefined, bias: number): Effort {

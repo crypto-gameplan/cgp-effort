@@ -14,7 +14,7 @@ import { proofLines, renderLog, safeLogPath, type EnvAsk } from './core/env'
 import { cacheSafe, EFFORT_LABELS, EFFORTS, keyOf, MODELS, WEIGHT } from './core/models'
 import { BOG, BOG_BG, BOG_EDGE, DASH_DIM, DASH_TEXT, DONE_ACCENT, DONE_BG, DONE_EDGE, EMBER, EMBER_BG, EMBER_EDGE, ICE, ICE_BG, ICE_EDGE, SLATE, SLATE_BG, SLATE_EDGE, UPDATED_BG, UPDATED_EDGE, UPDATED_HOVER, YELLOW } from './core/palette'
 import { bounded, capped, looksLikeRedo, REDO_STAY_PROMPTS, tipped } from './effort/policy'
-import { isWarm, markWarm, routeTo, routeWorth } from './effort/routing'
+import { isWarm, markWarm, routeAllowed, routeSaving, routeTo, typicalTurn, type TurnShape } from './effort/routing'
 import { asSpent, EMPTY_SPENT, savedText, weighted } from './effort/spend'
 import { helperFloor, helperPicks, helperQuestion } from './effort/subagents'
 import { benchReport, type BenchAnswer, type BenchCase } from './judge/bench'
@@ -110,6 +110,10 @@ async function setHandoffCard($: EngineInterface, kind: HandoffCard['kind'], ful
 const lastAnswer = atom({ plugin: 'cgp-effort', key: 'lastAnswer' } as const, '')
 const lastTurn = atom({ plugin: 'cgp-effort', key: 'lastTurn' } as const, null)
 let turnCost = 0
+// The main loop's requests and output this turn, and the chat's recent turns: how a routed turn is priced.
+let turnRequests = 0
+let turnOut = 0
+const recentTurns: TurnShape[] = []
 const swampHiddenAt = atom({ plugin: 'cgp-effort', key: 'swampHiddenAt' } as const, null)
 const setupPending = atom({ plugin: 'cgp-effort', key: 'setupPending' } as const, false)
 const settingsOpen = atom({ plugin: 'cgp-effort', key: 'settingsOpen' } as const, false)
@@ -2270,6 +2274,10 @@ export const register: Register = (on, options) => {
     // Its last block carries the warning card (see AssistantMessage).
     if (!e.agentId && e.reason === 'answer') await update($, lastAnswer, () => e.answer.trim())
     if (!e.agentId && turnCost > 0) await update($, lastTurn, () => ({ cost: turnCost, ms: e.durationMs ?? 0 }))
+    if (!e.agentId && turnRequests > 0) {
+      recentTurns.push({ requests: turnRequests, out: turnOut })
+      if (recentTurns.length > 10) recentTurns.shift()
+    }
     // A landed handoff card stays under the first reply after it and goes with the next.
     if (!e.agentId) {
       await update($, handoffCard, card => (!card || cardRunning(card.kind) ? card : card.seen ? null : { ...card, seen: true }))
@@ -2435,6 +2443,8 @@ Saved to ${out}.md and .json` }
   on('prompt.submit', async ($, e, next) => {
     await setTurnBusy($, true)
     turnCost = 0
+    turnRequests = 0
+    turnOut = 0
     const card = await read($, handoffCard)
     if (card && (card.kind === 'done' || card.kind === 'copied')) await update($, handoffCard, () => null)
     const byPerson = e.origin.kind === 'composer' || e.origin.kind === 'bridge' || e.origin.kind === 'sdk'
@@ -2525,6 +2535,11 @@ Saved to ${out}.md and .json` }
         }
         if (!midTurn) {
           let to = wantsEffort && config.modelAuto === 'on' ? routeTo(verdict.model, inUse) : null
+          // Only an easy prompt the judge is sure of leaves the chat's model: a harder one is where a weaker answer costs most.
+          if (to && !routeAllowed(verdict.effort, verdict.sure)) {
+            void proof($, `stays on ${inUse}: ${verdict.effort}${verdict.sure !== undefined ? ` at ${verdict.sure}` : ''} is not an easy, sure call`)
+            to = null
+          }
           // A redo after a cheaper answer is a miss: the retry and the next few prompts stay on the chat's model.
           if (routed && looksLikeRedo(e.text)) {
             stayUp = REDO_STAY_PROMPTS
@@ -2538,11 +2553,15 @@ Saved to ${out}.md and .json` }
           }
           // A switch to a model whose cache is cold writes the whole chat to it: stay when that costs more than it saves.
           const now = await $.clock.now().catch(() => Date.now())
-          if (to && !routeWorth(to, inUse, lastContext?.tokens ?? 0, { to: isWarm(to, now), inUse: !(cacheExpires > 0 && now >= cacheExpires) })) {
-            void proof($, `stays on ${inUse}: ${to} has a cold cache, switching would cost more`)
+          // Priced over the whole turn on today's rates: reading or writing the chat, each tool round, and the output.
+          const saving = to
+            ? routeSaving(to, inUse, lastContext?.tokens ?? 0, { to: isWarm(to, now), inUse: !(cacheExpires > 0 && now >= cacheExpires) }, typicalTurn(recentTurns))
+            : null
+          if (to && saving === null) {
+            void proof($, `stays on ${inUse}: moving to ${to} would not cost clearly less this turn`)
             to = null
           }
-          if (to) await update($, saved, old => ({ ...asSpent(old), moved: asSpent(old).moved + 1 }))
+          if (to) await update($, saved, old => ({ ...asSpent(old), moved: asSpent(old).moved + 1, routeSaved: asSpent(old).routeSaved + (saving ?? 0) }))
           if (to !== routed) {
             routed = to
             void proof($, to ? `this prompt runs on ${to} (the chat is on ${inUse})` : `back on ${inUse}`)
@@ -2577,7 +2596,11 @@ Saved to ${out}.md and .json` }
       if (e.agentId === undefined && answer?.usage) markWarm(request.model, answer.usage, await $.clock.now().catch(() => Date.now()))
       // A cheaper model's request leaves the chat's cache as it was: only the chat's model restarts the countdown.
       if (e.agentId === undefined && answer?.usage && request.model === e.model) await cacheTouched($, answer.usage).catch(() => undefined)
-      if (e.agentId === undefined && answer?.usage) turnCost += weighted(answer.usage)
+      if (e.agentId === undefined && answer?.usage) {
+        turnCost += weighted(answer.usage)
+        turnRequests++
+        turnOut += answer.usage.output_tokens ?? 0
+      }
       if (e.agentId !== undefined && answer?.usage) await agentCost($, e.agentId, weighted(answer.usage)).catch(() => undefined)
       return answer
     }

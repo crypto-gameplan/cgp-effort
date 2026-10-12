@@ -15,6 +15,8 @@ export type Spent = {
   /** Prompts that ran on a cheaper model than the chat's, and how many of those the person then redid. */
   moved: number
   redone: number
+  /** What the moved prompts saved against staying on the chat's model, in USD, estimated when they moved. */
+  routeSaved: number
   /** Subagents the judge picked an effort for: how many per effort, their requests, and what those cost (weighted). */
   helpers: { runs: Partial<Record<Effort, number>>; requests: number; cost: number }
 }

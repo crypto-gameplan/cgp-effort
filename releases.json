@@ -1,5 +1,10 @@
 [
   {
+    "version": "1.4.1",
+    "date": "2026-10-12",
+    "note": "Price cheaper-model routing on real rates, per turn"
+  },
+  {
     "version": "1.4.0",
     "date": "2026-10-12",
     "note": "The TypeSafe key saves again",
