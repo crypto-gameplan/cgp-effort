@@ -1,0 +1,57 @@
+name: Compatibility
+
+# Weekly run against the newest Claude Code: its plugin API is young, and a release that breaks the mod should show up
+# here before a customer reports it. A failure opens an issue, or comments on the one already open.
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @anthropic-ai/claude-code@latest
+      - run: claude --version
+      - run: claude plugin validate .
+      - name: Tests
+        run: |
+          out=$(claude plugin test . 2>&1) || true
+          echo "$out" | grep -E '^\(fail\)|^ *[0-9]+ (pass|fail)|^Ran'
+          echo "$out" | grep -qE '^ *0 fail' || { echo "$out" | tail -60; exit 1; }
+
+  report:
+    needs: test
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Open or update the issue
+        run: |
+          version=$(npm view @anthropic-ai/claude-code version)
+          failed=$(gh run view "$GITHUB_RUN_ID" --json jobs --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")')
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          body="Claude Code $version breaks CGP Effort. Failed: $failed. Run: $run_url"
+          gh label create compat --color B60205 --description "Breaks with a newer Claude Code" --force
+          open=$(gh issue list --label compat --state open --json number --jq '.[0].number')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body "$body"
+          else
+            gh issue create --title "Claude Code $version breaks CGP Effort" --label compat --body "$body"
+          fi

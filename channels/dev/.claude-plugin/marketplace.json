@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "crypto-gameplan-dev",
+  "description": "CGP Effort as it is on main: every release before it is published. For development only.",
+  "owner": {
+    "name": "Crypto Gameplan",
+    "url": "https://github.com/crypto-gameplan"
+  },
+  "plugins": [
+    {
+      "name": "cgp-effort",
+      "description": "CGP Effort from main (dev channel).",
+      "source": {
+        "source": "github",
+        "repo": "crypto-gameplan/cgp-effort",
+        "ref": "main"
+      },
+      "category": "productivity"
+    }
+  ]
+}

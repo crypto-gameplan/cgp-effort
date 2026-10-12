@@ -1,0 +1,39 @@
+name: Test
+
+# The mod runs wherever Claude Code runs, so every push is tested on macOS, Linux and Windows.
+on:
+  push:
+    branches: [main, stable]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The version the mod was last checked against; raise it when Claude Code's plugin API moves on.
+      - run: npm install -g @anthropic-ai/claude-code@2.1.296
+      - run: claude plugin validate .
+      - name: Guide names this version
+        run: node tools/sync-version.mjs --check
+      - name: Tests
+        run: |
+          out=$(claude plugin test . 2>&1) || true
+          echo "$out" | grep -E '^\(fail\)|^ *[0-9]+ (pass|fail)|^Ran'
+          echo "$out" | grep -qE '^ *0 fail' || { echo "$out" | tail -60; exit 1; }
+      - name: Release gate
+        run: |
+          git config --global user.email ci@example.invalid
+          git config --global user.name ci
+          tools/release-selfcheck.sh

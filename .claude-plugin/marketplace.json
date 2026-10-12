@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "crypto-gameplan",
+  "description": "Claude Code plugins by Crypto Gameplan.",
+  "owner": {
+    "name": "Crypto Gameplan",
+    "url": "https://github.com/crypto-gameplan"
+  },
+  "plugins": [
+    {
+      "name": "cgp-effort",
+      "description": "Picks the reasoning effort for every prompt and counts down the prompt cache, with one-click Compact and Handoff.",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/crypto-gameplan/cgp-effort.git",
+        "ref": "stable"
+      },
+      "category": "productivity"
+    }
+  ]
+}
