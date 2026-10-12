@@ -1,5 +1,10 @@
 [
   {
+    "version": "1.5.1",
+    "date": "2026-10-12",
+    "note": "Show CGP Follow-ups in a row above the bar"
+  },
+  {
     "version": "1.5.0",
     "date": "2026-10-12",
     "note": "Cheaper when it can, priced per turn",

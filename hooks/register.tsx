@@ -29,6 +29,7 @@ import { CARD_CLOSE_HOVER, COMPACT_CARD_MS, inPhase, INTRO_MS, kTokens, markTitl
 import { BIAS_WORDS, CARDS, CONFIGURE_COMMAND, ICON_EFFORT, ICON_HANDOFF, ICON_JUDGE, ICON_SHOW, MODEL_CHOICES, SAVED_CARD_MS, type SettingsCard } from './ui/settings'
 import { LEAN_STOPS, setupBack, setupCounter, setupNext, setupShown, type SetupStep } from './ui/setup'
 import { CREW_FEED_VERSION, crewFeedShows, crewRow } from './ui/crew'
+import { FOLLOW_FEED_VERSION, followFeedShows, followRow } from './ui/follow'
 import { editSecret, keyHint, maskOf } from './core/secret'
 import { dashboardLines, type TerminalBand, bandFitsOneRow } from './ui/terminal'
 
@@ -137,6 +138,10 @@ const isColdHidden = atom({ plugin: 'cgp-effort', key: 'isColdHidden' } as const
 const crewHost = atom({ plugin: 'cgp-effort', key: 'crewHost' } as const, null)
 const crewRequest = atom({ plugin: 'cgp-effort', key: 'crewRequest' } as const, null)
 const crewFeed = atom({ plugin: 'cgp-crew', key: 'feed' } as const, null)
+// The follow-up row (ui/follow.tsx): the same handshake with cgp-follow-ups.
+const followHost = atom({ plugin: 'cgp-effort', key: 'followHost' } as const, null)
+const followRequest = atom({ plugin: 'cgp-effort', key: 'followRequest' } as const, null)
+const followFeed = atom({ plugin: 'cgp-follow-ups', key: 'feed' } as const, null)
 const setupStep = atom({ plugin: 'cgp-effort', key: 'setupStep' } as const, null)
 // Saved in one go at Done or ✕: each saved setting reloads the plugin and posts a notice in the chat.
 const setupDraft = atom({ plugin: 'cgp-effort', key: 'setupDraft' } as const, {})
@@ -875,6 +880,17 @@ async function askCrew($: EngineInterface, action: 'panel' | 'hide') {
   await update($, crewRequest, prev => ({ id: (prev?.id ?? 0) + 1, action }))
 }
 
+/** Tells cgp-follow-ups whether this band shows its feed, on the same terms as the crew row. */
+async function announceFollowHost($: EngineInterface) {
+  const draws = config.layout === 'default'
+  const now = await read($, followHost)
+  if (!now || now.v !== FOLLOW_FEED_VERSION || now.draws !== draws) await update($, followHost, () => ({ v: FOLLOW_FEED_VERSION, draws }))
+}
+
+async function askFollow($: EngineInterface, action: 'panel' | 'hide' | 'sync') {
+  await update($, followRequest, prev => ({ id: (prev?.id ?? 0) + 1, action }))
+}
+
 async function saveSetting($: EngineInterface, field: keyof typeof SETTING_FIELDS, value: string) {
   const { deny } = await $.config
     .set({ key: `cgp-effort.${SETTING_FIELDS[field]}`, value })
@@ -909,6 +925,7 @@ async function saveSetting($: EngineInterface, field: keyof typeof SETTING_FIELD
   config = { ...readConfig(raw), typesafeKey: config.typesafeKey }
   applyTheme()
   await announceCrewHost($).catch(() => undefined)
+  await announceFollowHost($).catch(() => undefined)
   $.ui.invalidate('ui.render')
 }
 function savedCardTree($: EngineInterface, e: RenderInput<'AbovePrompt'>) {
@@ -2228,6 +2245,7 @@ export const register: Register = (on, options) => {
       setupDone !== true ? update($, setupStep, () => 'pick').then(() => update($, setupPending, () => true)) : null,
     ])
     await announceCrewHost($).catch(() => undefined)
+    await announceFollowHost($).catch(() => undefined)
     // Makes plain /cgp-effort the mod's own command instead of the command file run as a skill.
     void $.command.register({ name: 'cgp-effort', description: 'CGP Effort: settings, debug, handoff, setup, bench, auto, stats.' }).catch(() => undefined)
     void $.fs.read(`${$.plugin.root}/.claude-plugin/plugin.json`).then(t => { ownVersion = String(JSON.parse(String(t)).version ?? '') }).catch(() => undefined)
@@ -3702,20 +3720,35 @@ Saved to ${out}.md and .json` }
             onHide: () => askCrew($, 'hide'),
           })
         : null
+      // The same for cgp-follow-ups while it tracks issues, under the crew row.
+      const ffeed = await read($, followFeed)
+      const follow = followFeedShows(ffeed)
+        ? followRow(ffeed, {
+            Box,
+            Text,
+            Button,
+            Svg: e.surface === 'desktop' ? Svg : undefined,
+            columns: typeof e.props.bodyColumns === 'number' ? e.props.bodyColumns : 100,
+            onPanel: () => askFollow($, 'panel'),
+            onHide: () => askFollow($, 'hide'),
+          })
+        : null
       if (e.surface === 'terminal') {
         const dash = await dashboardBand($, e)
-        return crew ? (
+        return crew || follow ? (
           <Box key="dash-col" flexDirection="column">
             {crew}
+            {follow}
             {dash}
           </Box>
         ) : dash
       }
       const { question } = await effortRows($, e)
       const dash = await dashboardBand($, e)
-      return question || crew ? (
+      return question || crew || follow ? (
         <Box key="dash-col" flexDirection="column">
           {crew}
+          {follow}
           {question}
           {dash}
         </Box>

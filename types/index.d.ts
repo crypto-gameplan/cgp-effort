@@ -135,6 +135,20 @@ export type FileTouch = {
 }
 
 /**
+ * The follow-up bar the cgp-follow-ups plugin hands over, ready to draw (its own contract has the same shape).
+ * Drawn in the follow-up row above the dashboard while it tracks issues; cgp-follow-ups then leaves out its own bar.
+ */
+export type FollowFeed = {
+  v: number
+  open: number
+  doing: number
+  done: number
+  next: { key: string; title: string; status: string; category: 'todo' | 'doing' | 'done' | 'unknown' } | null
+  chips: { key: string; category: 'todo' | 'doing' | 'done' | 'unknown' }[]
+  isSyncing: boolean
+}
+
+/**
  * The crew bar the cgp-crew plugin hands over, ready to draw (its own contract has the same shape). Drawn in the
  * crew row above the dashboard while a crew runs; cgp-crew then leaves out its own bar.
  */
@@ -241,10 +255,18 @@ declare module 'claude-code' {
       crewHost: { v: number; draws: boolean } | null
       /** The last press in the crew row, for cgp-crew to carry out; `id` grows with each press. */
       crewRequest: { id: number; action: 'panel' | 'hide' } | null
+      /** Tells cgp-follow-ups that this band shows its feed (`draws`), in feed format `v`, so it leaves out its own bar. */
+      followHost: { v: number; draws: boolean } | null
+      /** The last press in the follow-up row, for cgp-follow-ups to carry out; `id` grows with each press. */
+      followRequest: { id: number; action: 'panel' | 'hide' | 'sync' } | null
     }
     'cgp-crew': {
       /** cgp-crew's own value, read here: its bar, or null while no crew flow is shown. */
       feed: CrewFeed | null
+    }
+    'cgp-follow-ups': {
+      /** cgp-follow-ups' own value, read here: its bar, or null while nothing is tracked. */
+      feed: FollowFeed | null
     }
   }
 }

@@ -1,6 +1,6 @@
 # CGP Effort guide
 
-Version 1.5.0, updated 2026-10-12. This guide describes that version; a newer plugin may differ in details.
+Version 1.5.1, updated 2026-10-12. This guide describes that version; a newer plugin may differ in details.
 
 This is the reference for CGP Effort, a Claude Code plugin by Crypto Gameplan. An agent that is asked how the plugin works should answer from this file. Names in quotes are the words the person sees in the app, so they can find them.
 
@@ -108,6 +108,20 @@ Settings, "Customize", "Look" switches between the bar ("Dashboard") and "Minima
 | ✕ | Hides the row until the crew reports again. |
 
 The row disappears when no crew runs. With the look set to "Minimal", or without CGP Crew 1.1 or later, CGP Crew draws its own bar as before.
+
+## With CGP Follow-ups
+
+[CGP Follow-ups](https://github.com/crypto-gameplan/cgp-follow-ups) keeps the follow-up issues of a session in view: every issue Claude creates in Jira, GitHub or Linear is tracked, and its status follows the tracker by itself. When both plugins are installed and the look is "Dashboard", the follow-ups show in a row above the bar, under the crew row:
+
+| In the follow-up row | Meaning |
+| --- | --- |
+| ✦ Follow-ups | The row belongs to CGP Follow-ups. |
+| ◐ CGP-812 ○ CGP-815 ● CGP-809 | One chip per issue: half for in progress, ring for to do, filled for done. |
+| 1 in progress · 1 to do · 1 done | The counts; "all 3 done" in green when nothing is open. |
+| Follow-ups 3 | Opens the follow-up panel, with the status, title and actions of every issue. |
+| ✕ | Hides the row for this session. |
+
+The row shows while an issue is open and for five minutes after the last one is done. With the look set to "Minimal", CGP Follow-ups draws its own bar.
 
 ## Prompt cache and cold chats
 

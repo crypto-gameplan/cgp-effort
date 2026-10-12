@@ -78,6 +78,10 @@ its title, where the lead stands ("Reviewing 1/3"), one segment per task in its 
 opens the crew panel and a ✕ that hides the row. Without a running crew the row is gone. In the Minimal look CGP Crew
 draws its own bar instead.
 
+**With [CGP Follow-ups](https://github.com/crypto-gameplan/cgp-follow-ups)** installed, the follow-up issues of the
+session show in a row under it: one status chip per issue, the counts, a Follow-ups button that opens their panel and
+a ✕ that hides the row. In the Minimal look CGP Follow-ups draws its own bar instead.
+
 The bar also warns when the cache has gone cold on a big chat, when the context is getting full, when a 5-hour or weekly
 limit passes 80% (with a Save mode that caps effort at Medium), and when the judge stops answering.
 
