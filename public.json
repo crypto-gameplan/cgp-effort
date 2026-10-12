@@ -1,0 +1,17 @@
+[
+  {
+    "version": "1.0.0",
+    "date": "2026-10-12",
+    "note": "First release of CGP Effort",
+    "detail": [
+      "Picks the reasoning effort for every prompt with Haiku 5.5 on your own Claude login, or Jev with a TypeSafe key.",
+      "Shows the effort, the context share and the prompt-cache countdown above the prompt.",
+      "Compact and Handoff in one click when a chat gets heavy, with alerts for cold caches, full contexts and usage limits.",
+      "A handoff names the next steps and the skills to use, marks what was not checked, links instead of copying, and can be aimed at what comes next.",
+      "Auto effort can be switched off for good in Settings without uninstalling.",
+      "Optional: keep the prompt cache warm on big chats, and switch animations off.",
+      "Runs in the desktop app and the terminal, on macOS, Linux and Windows."
+    ],
+    "public": true
+  }
+]
