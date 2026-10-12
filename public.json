@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.2.0",
+    "date": "2026-10-12",
+    "note": "Tidier bar in narrow terminals",
+    "detail": [
+      "In a terminal too narrow for one line, the bar's buttons move to a second line instead of breaking.",
+      "The guide and README describe the CGP Crew row."
+    ],
+    "public": true
+  },
+  {
     "version": "1.1.0",
     "date": "2026-10-12",
     "note": "CGP Crew shows in the band",
