@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.5.0",
+    "date": "2026-10-12",
+    "note": "Cheaper when it can, priced per turn",
+    "detail": "Routing to a cheaper model now weighs the whole turn on current API rates and only moves when it saves at least 10 %. /cgp-effort stats shows the estimated saving.",
+    "public": true
+  },
+  {
     "version": "1.4.0",
     "date": "2026-10-12",
     "note": "The TypeSafe key saves again",
