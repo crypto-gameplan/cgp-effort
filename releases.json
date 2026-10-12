@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.1.0",
+    "date": "2026-10-12",
+    "note": "CGP Crew shows in the band",
+    "detail": [
+      "When the cgp-crew plugin runs a crew, it appears in a row above the dashboard instead of a second bar.",
+      "The Crew button opens the crew panel, the cross hides the row.",
+      "With the Minimal look or without cgp-crew nothing changes."
+    ],
+    "public": true
+  },
+  {
     "version": "1.0.1",
     "date": "2026-10-12",
     "note": "Show a running CGP Crew in a row of the band"
