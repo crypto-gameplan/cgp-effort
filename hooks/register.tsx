@@ -3746,7 +3746,7 @@ Saved to ${out}.md and .json` }
       const { question } = await effortRows($, e)
       const dash = await dashboardBand($, e)
       return question || crew || follow ? (
-        <Box key="dash-col" flexDirection="column">
+        <Box key="dash-col" flexDirection="column" gap={1}>
           {crew}
           {follow}
           {question}

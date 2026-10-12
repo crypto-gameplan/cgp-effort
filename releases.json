@@ -1,5 +1,10 @@
 [
   {
+    "version": "1.6.1",
+    "date": "2026-10-12",
+    "note": "Space between the rows above the bar"
+  },
+  {
     "version": "1.6.0",
     "date": "2026-10-12",
     "note": "CGP Follow-ups in the bar",
