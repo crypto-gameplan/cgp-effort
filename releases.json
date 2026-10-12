@@ -1,5 +1,10 @@
 [
   {
+    "version": "1.2.1",
+    "date": "2026-10-12",
+    "note": "Mask the TypeSafe key in Settings and setup"
+  },
+  {
     "version": "1.2.0",
     "date": "2026-10-12",
     "note": "Tidier bar in narrow terminals",

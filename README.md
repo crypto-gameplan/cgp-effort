@@ -95,7 +95,8 @@ a fraction of the chat model's price; if Haiku fails, Claude Code compacts as us
 - A key is only needed for Jev. Paste it in the setup or the Judge card, or enter it with
   `/plugin configure cgp-effort@crypto-gameplan`. Either way it goes to Claude Code's secure storage (the Keychain on
   macOS), never to a plain file. If Claude Code cannot store it there, the key is dropped and you are told to use
-  `/plugin configure`. Use a key with a spending limit if TypeSafe offers one.
+  `/plugin configure`. The field shows dots while you type and, once saved, only the key's last four characters. Use a
+  key with a spending limit if TypeSafe offers one.
 - Your prompt goes to the judge you use: Haiku through your Claude login, and with a key also to TypeSafe. Nothing else
   is sent anywhere.
 - Like any Claude Code plugin, this one runs code on your machine. All of it is in [`hooks/`](hooks/). The programs it

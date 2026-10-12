@@ -29,6 +29,7 @@ import { CARD_CLOSE_HOVER, COMPACT_CARD_MS, inPhase, INTRO_MS, kTokens, markTitl
 import { BIAS_WORDS, CARDS, CONFIGURE_COMMAND, ICON_EFFORT, ICON_HANDOFF, ICON_JUDGE, ICON_SHOW, MODEL_CHOICES, SAVED_CARD_MS, type SettingsCard } from './ui/settings'
 import { LEAN_STOPS, setupBack, setupCounter, setupNext, setupShown, type SetupStep } from './ui/setup'
 import { CREW_FEED_VERSION, crewFeedShows, crewRow } from './ui/crew'
+import { editSecret, keyHint, maskOf } from './core/secret'
 import { dashboardLines, type TerminalBand, bandFitsOneRow } from './ui/terminal'
 
 let ACCENT = accent()
@@ -915,10 +916,18 @@ function savedCardTree($: EngineInterface, e: RenderInput<'AbovePrompt'>) {
     </Box>
   )
 }
+/**
+ * The TypeSafe key being typed in Settings or setup. Kept here, never in $.state (which any plugin can read) or the
+ * draft: the field shows only dots (core/secret.ts). Cleared when the panel closes or the key is saved.
+ */
+let typedKey = ''
+
 async function saveDraft($: EngineInterface) {
   const draft = await read($, settingsDraft)
-  const { key, ...rest } = draft
-  if (key?.trim()) await saveJevKey($, key, false)
+  const { key: _draftKey, ...rest } = draft
+  const key = typedKey
+  typedKey = ''
+  if (key.trim()) await saveJevKey($, key, false)
   const changes: Record<string, string> = {}
   for (const field of Object.keys(SETTING_FIELDS) as (keyof typeof SETTING_FIELDS)[]) {
     const value = rest[field]
@@ -1776,6 +1785,7 @@ async function dashboardBand($: EngineInterface, e: RenderInput<'AbovePrompt'>) 
   })
   const toggleSettings = async () => {
     if (await read($, settingsOpen)) {
+      typedKey = ''
       await update($, settingsDraft, () => ({}))
       await update($, settingsOpen, () => false)
       $.ui.invalidate('ui.render')
@@ -2676,6 +2686,7 @@ Saved to ${out}.md and .json` }
             hover={{ scope: 'settings', backgroundColor: HOVER_BOX }}
             onPress={async () => {
               if (await read($, settingsOpen)) {
+                typedKey = ''
                 await update($, settingsDraft, () => ({}))
                 await update($, settingsOpen, () => false)
                 $.ui.invalidate('ui.render')
@@ -2846,10 +2857,12 @@ Saved to ${out}.md and .json` }
       const opts = (values: readonly string[]) => values.map(value => ({ value, label: value }))
       // Picked from what is installed: a plugin cannot open a file dialog, and a skill is run by its name anyway.
       const skillNames = await read($, installedSkills)
-      const hasKey = Boolean(await jevKey($).catch(() => undefined)) || Boolean(await typesafeKeyAnywhere($).catch(() => undefined))
+      const savedKey = (await jevKey($).catch(() => undefined)) || (await typesafeKeyAnywhere($).catch(() => undefined))
+      const hasKey = Boolean(savedKey)
       const checking = await read($, updateCheck)
       // For a plain ✕ button: a dismiss-role button may be taken by the app before onPress runs.
       const close = async () => {
+        typedKey = ''
         await update($, settingsDraft, () => ({}))
         await update($, judgeTest, () => null)
         await update($, settingsCard, () => null)
@@ -2895,7 +2908,7 @@ Saved to ${out}.md and .json` }
         value === undefined ? false
         : field === 'key' ? Boolean(value.trim())
         : field === 'hide' ? !sameSet(value, config.hide.join(','))
-        : value !== String(config[field as Exclude<keyof SettingsDraft, 'key' | 'hide'>] ?? ''))
+        : value !== String(config[field as Exclude<keyof SettingsDraft, 'key' | 'hide'>] ?? '')) || Boolean(typedKey.trim())
       const hidden = (draft.hide ?? config.hide.join(',')).split(',').filter(Boolean)
       const judgeName = shown.judge === 'haiku' ? 'Haiku' : hasKey || shown.judge === 'jev' ? 'Haiku + Jev' : 'Haiku'
       const summaries: Record<SettingsCard, string> = {
@@ -3124,15 +3137,17 @@ Saved to ${out}.md and .json` }
 ] : card === 'judge' ? (bare ? [] : [
             pick({ key: 'settings-judge-pick', value: shown.judge, options: [{ value: 'auto', label: hasKey ? 'Haiku + Jev' : 'Haiku (Jev if added)' }, { value: 'haiku', label: 'Haiku only' }], onSelect: v => set('judge')(v === 'haiku' ? 'haiku' : 'auto') }),
             ...(shown.judge !== 'haiku'
-              ? [field('key-field', <Input key="settings-key" placeholder={hasKey ? 'Key saved. Paste to replace' : 'Paste TypeSafe key'}
-                  value={draft.key ?? ''} submitLabel="ok" onInput={set('key')} onSubmit={set('key')} />, 30)]
+              ? [field('key-field', <Input key="settings-key" placeholder={hasKey ? `Key saved${keyHint(savedKey)}. Paste to replace` : 'Paste TypeSafe key'}
+                  value={maskOf(typedKey)} submitLabel="ok"
+                  onInput={(v: string) => { typedKey = editSecret(typedKey, v); $.ui.invalidate('ui.render') }}
+                  onSubmit={(v: string) => { typedKey = editSecret(typedKey, v); $.ui.invalidate('ui.render') }} />, 30)]
               : []),
             <Button key="settings-judge-test" variant="secondary" dimColor={tested?.ok === null} label={tested?.ok === null ? 'Testing…' : 'Test'}
               onPress={async () => {
                 if (tested?.ok === null) return
                 await update($, judgeTest, () => ({ ok: null, text: '' }))
                 $.ui.invalidate('ui.render')
-                const result = await testJudge($, shown.judge, draft.key ?? '')
+                const result = await testJudge($, shown.judge, typedKey)
                 await update($, judgeTest, () => result)
                 $.ui.invalidate('ui.render')
               }} />,
@@ -3377,12 +3392,14 @@ Saved to ${out}.md and .json` }
       if (step === 'jev')
         return band('Key from typesafe.ai:', 52, [
           <Box key="key-field" width={30} flexShrink={1}>
-            <Input key="setup-key" placeholder="TypeSafe key" value={draft.key ?? ''} submitLabel="Save"
-              onInput={(v: string) => pick('key', v)}
+            <Input key="setup-key" placeholder="TypeSafe key" value={maskOf(typedKey)} submitLabel="Save"
+              onInput={(v: string) => { typedKey = editSecret(typedKey, v); $.ui.invalidate('ui.render') }}
               onSubmit={async (v: string) => {
-                if (!v.trim()) return
+                const key = editSecret(typedKey, v)
+                typedKey = ''
+                if (!key.trim()) return
                 await update($, setupDraft, d => ({ ...d, key: undefined }))
-                await saveJevKey($, v, false)
+                await saveJevKey($, key, false)
                 await goSetup($, 'lean')
               }} />
           </Box>,

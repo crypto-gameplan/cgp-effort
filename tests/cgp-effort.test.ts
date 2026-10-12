@@ -2595,6 +2595,41 @@ describe('settings panel', () => {
     expect(parseVerdict('{"model":"opus","effort":"high","sure":0.7,"why":"x"}')?.sure).toBe(0.7)
   })
 
+  test('a typed key shows as dots and only its last four characters once saved', async ($, on) => {
+    engine(on, { USERPROFILE: 'C:/Users/x' })
+    mock.clock(on)
+    on('ui.toast', () => ({ value: undefined }) as never)
+    const stored: Record<string, unknown> = {}
+    on('config.set', (_$, e) => {
+      stored[e.key] = e.value
+      return { value: e.value } as never
+    })
+    await start($, on)
+    const guide = await $.ui.mount(DESK_BAND)
+    await guide.press({ key: 'setup-close' })
+    await guide.unmount()
+    const secret = 'tsk_live_SECRET987654'
+    await $.command.run({ command: 'cgp-effort', args: 'settings' } as never)
+    const panel = await $.ui.mount(DESK_BAND)
+    await panel.press({ key: 'settings-card-judge' })
+    await panel.input({ key: 'settings-key', text: secret, kind: 'change' } as never)
+    const typing = JSON.stringify(await panel.drawn())
+    expect(typing).not.toContain('SECRET')
+    expect(typing).toContain('•'.repeat(secret.length))
+    await panel.press({ key: 'settings-save' })
+    await panel.unmount()
+    expect(stored['cgp-effort.typesafeKey']).toBe(secret)
+
+    await $.command.run({ command: 'cgp-effort', args: 'settings' } as never)
+    const again = await $.ui.mount(DESK_BAND)
+    // The panel may reopen on the card it showed last.
+    if (await again.find({ key: 'settings-card-judge' })) await again.press({ key: 'settings-card-judge' })
+    const shown = JSON.stringify(await again.drawn())
+    expect(shown).not.toContain('SECRET')
+    expect(shown).toContain('ends in 7654')
+    await again.unmount()
+  })
+
   test('a key Claude Code refuses to store is dropped, not written to a file', async ($, on) => {
     engine(on, { USERPROFILE: 'C:/Users/x' })
     mock.clock(on)
