@@ -2630,6 +2630,39 @@ describe('settings panel', () => {
     await again.unmount()
   })
 
+  test('without a /config row the key goes to secure storage through the CLI, on stdin only', async ($, on) => {
+    engine(on, { USERPROFILE: 'C:/Users/x' })
+    mock.clock(on)
+    on('config.set', () => ({ deny: 'no /config row with key cgp-effort.typesafeKey' }) as never)
+    const runs: { argv: readonly string[]; stdin?: string }[] = []
+    on('process.run', (_$, e) => {
+      const call = e as unknown as { argv: readonly string[]; init?: { stdin?: string } }
+      runs.push({ argv: call.argv, stdin: call.init?.stdin })
+      return { value: { exitCode: 0, stdout: 'Configuration saved.', stderr: '' } } as never
+    })
+    const said: string[] = []
+    on('ui.toast', (_$, e) => {
+      said.push(String((e as { text?: string }).text ?? e))
+      return { value: undefined } as never
+    })
+    await start($, on)
+    const guide = await $.ui.mount(DESK_BAND)
+    await guide.press({ key: 'setup-close' })
+    await guide.unmount()
+    await $.command.run({ command: 'cgp-effort', args: 'settings' } as never)
+    const panel = await $.ui.mount(DESK_BAND)
+    await panel.press({ key: 'settings-card-judge' })
+    await panel.input({ key: 'settings-key', text: 'tsk_live_SECRET42', kind: 'change' } as never)
+    await panel.press({ key: 'settings-save' })
+    await panel.unmount()
+    const configure = runs.find(r => r.argv.includes('configure'))
+    expect(configure?.argv.slice(-3)).toEqual(['configure', 'cgp-effort@crypto-gameplan', '--values-stdin'])
+    expect(configure?.argv.join(' ')).not.toContain('SECRET')
+    expect(JSON.parse(configure?.stdin ?? '{}')).toEqual({ typesafeKey: 'tsk_live_SECRET42' })
+    expect(said.join(' | ')).toContain('secure storage')
+    expect(said.join(' | ')).not.toContain('was not saved')
+  })
+
   test('a key Claude Code refuses to store is dropped, not written to a file', async ($, on) => {
     engine(on, { USERPROFILE: 'C:/Users/x' })
     mock.clock(on)

@@ -942,7 +942,12 @@ async function saveDraft($: EngineInterface) {
   await $.store.set('setupSave', changes)
   await drainSetupSave($)
 }
-/** Saves to the sensitive setting (secure storage); a refused write drops the key, never writing it to a file. */
+/**
+ * Saves the key to the sensitive setting, which Claude Code keeps in secure storage (the Keychain on macOS); a refused
+ * write drops the key, never writing it to a file. Builds that list no /config row for a plugin's options refuse
+ * `$.config.set`; the key then goes through `claude plugin configure --values-stdin`, the same secure storage, with the
+ * key on stdin so it never shows in a process list.
+ */
 async function saveJevKey($: EngineInterface, key: string, setJudge = true) {
   const clean = parseJevKey(key) ?? key.trim()
   if (!clean) return
@@ -950,8 +955,16 @@ async function saveJevKey($: EngineInterface, key: string, setJudge = true) {
     .set({ key: 'cgp-effort.typesafeKey', value: clean })
     .catch((error: unknown) => ({ deny: error instanceof Error ? error.message : String(error) }))
   if (deny) {
-    $.ui.toast(`CGP Effort: the key was not saved (${String(deny).slice(0, 80)}). Use ${CONFIGURE_COMMAND}.`)
-    return
+    const viaCli = await runClaude($, ['plugin', 'configure', pluginId($), '--values-stdin'], {
+      stdin: JSON.stringify({ typesafeKey: clean }),
+      timeoutMs: 60_000,
+    }).catch((error: unknown) => ({ exitCode: 1, stdout: '', stderr: error instanceof Error ? error.message : String(error) }))
+    if (viaCli.exitCode !== 0) {
+      // The CLI's own words, never the key: it is on stdin only, and errors name options, not values.
+      const why = (viaCli.stderr || viaCli.stdout || String(deny)).trim().split('\n').pop() ?? ''
+      $.ui.toast(`CGP Effort: the key was not saved (${why.slice(0, 80)}). Use ${CONFIGURE_COMMAND}.`)
+      return
+    }
   }
   config = { ...config, typesafeKey: clean }
   if (setJudge && config.judge !== 'jev') await saveSetting($, 'judge', 'jev')

@@ -1,5 +1,10 @@
 [
   {
+    "version": "1.3.1",
+    "date": "2026-10-12",
+    "note": "Save the TypeSafe key where Claude Code has no /config row"
+  },
+  {
     "version": "1.3.0",
     "date": "2026-10-12",
     "note": "The TypeSafe key is masked",

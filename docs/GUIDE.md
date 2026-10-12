@@ -1,6 +1,6 @@
 # CGP Effort guide
 
-Version 1.3.0, updated 2026-10-12. This guide describes that version; a newer plugin may differ in details.
+Version 1.3.1, updated 2026-10-12. This guide describes that version; a newer plugin may differ in details.
 
 This is the reference for CGP Effort, a Claude Code plugin by Crypto Gameplan. An agent that is asked how the plugin works should answer from this file. Names in quotes are the words the person sees in the app, so they can find them.
 
@@ -70,7 +70,7 @@ Jev is optional. It is a faster judge from TypeSafe (about a quarter of a second
 
 Where the key is kept:
 
-- A key pasted in the setup or in Settings, "Judge", is saved through Claude Code into its secure storage (the Keychain on macOS). If Claude Code refuses, the key is not saved anywhere and the person is told to use `/plugin configure cgp-effort@crypto-gameplan`.
+- A key pasted in the setup or in Settings, "Judge", is saved through Claude Code into its secure storage (the Keychain on macOS). Where Claude Code offers no settings row for plugin options, the plugin hands the key to `claude plugin configure` on its standard input, which stores it the same way and never shows it in a process list. If that fails too, the key is not saved anywhere and the person is told to use `/plugin configure cgp-effort@crypto-gameplan`.
 - The key field shows dots, never the key. Until it is saved the key stays in the plugin's memory only, not in state other plugins can read. Once saved, the field shows only its last four characters ("Key saved · ends in 1234").
 - `/plugin configure cgp-effort@crypto-gameplan` also stores it in secure storage.
 - The plugin also reads the environment variable `TYPESAFE_API_KEY`, and, only when the judge is set to Jev outright, an existing `~/.config/jev/.env`. It never writes that file.
