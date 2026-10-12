@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.6.0",
+    "date": "2026-10-12",
+    "note": "CGP Follow-ups in the bar",
+    "detail": "With the new CGP Follow-ups plugin installed, the follow-up issues of your session show in a row of the CGP Effort bar, with their status kept up to date from Jira, GitHub or Linear.",
+    "public": true
+  },
+  {
     "version": "1.5.1",
     "date": "2026-10-12",
     "note": "Show CGP Follow-ups in a row above the bar"
