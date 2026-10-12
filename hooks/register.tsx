@@ -1,4 +1,4 @@
-import { atom, read, type EngineInterface, type ModelForkResult, type RenderInput, update } from 'claude-code'
+import { atom, read, type EngineInterface, type ModelForkResult, type RenderChildren, type RenderInput, update } from 'claude-code'
 import { isStill, setStill, accent, setLight, setTheme, themedEls, tintHex } from './core/theme'
 import type { AgentRec, Effort, HandoffAfter, HandoffChoice, ModelKey, Pick, SettingsDraft } from '../types'
 import { ART_COLUMNS, ART_FRAME_MS, ART_MIN_WIDTH, ART_ROWS, artFrame, MOVING, type ArtKind } from './ui/pixel-art'
@@ -29,7 +29,7 @@ import { CARD_CLOSE_HOVER, COMPACT_CARD_MS, inPhase, INTRO_MS, kTokens, markTitl
 import { BIAS_WORDS, CARDS, CONFIGURE_COMMAND, ICON_EFFORT, ICON_HANDOFF, ICON_JUDGE, ICON_SHOW, MODEL_CHOICES, SAVED_CARD_MS, type SettingsCard } from './ui/settings'
 import { LEAN_STOPS, setupBack, setupCounter, setupNext, setupShown, type SetupStep } from './ui/setup'
 import { CREW_FEED_VERSION, crewFeedShows, crewRow } from './ui/crew'
-import { dashboardLines, type TerminalBand } from './ui/terminal'
+import { dashboardLines, type TerminalBand, bandFitsOneRow } from './ui/terminal'
 
 let ACCENT = accent()
 function applyTheme() {
@@ -1201,6 +1201,36 @@ function terminalPanel($: EngineInterface, e: RenderInput<'AbovePrompt'>, key: s
 async function terminalBand($: EngineInterface, e: RenderInput<'AbovePrompt'>, b: TerminalBand) {
   const { Box, Text } = themedEls($.ui.resolve(e))
   const { rows } = await effortRows($, e, { auto: !b.autoInBar })
+  const columns = typeof e.props.bodyColumns === 'number' ? e.props.bodyColumns : 0
+  const art = bandArt($, e, b.kind)
+  const titleText = b.word ? `✦ ${b.word.text}${b.word.rest}` : `✦ ${b.title}`
+  // Too narrow for the title and the buttons side by side: the buttons get a wrapping row of their own under the
+  // title, instead of running past the border and breaking a label in two.
+  if (!bandFitsOneRow(columns, titleText, b.buttons, art ? ART_COLUMNS : 0)) {
+    return (
+      <Box key={`${b.key}-col`} flexDirection="column">
+        <Box key={b.key} flexDirection="row" gap={1} alignItems="center" paddingX={1} backgroundColor={b.bg} borderStyle="round" borderColor={b.edge}>
+          <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0}>
+            {b.word ? (
+              <Box flexDirection="row" minWidth={0}>
+                <Text color={b.color} bold>{'✦ '}</Text>
+                <Text key={`${b.key}-word`} color={b.word.color} bold>{b.word.text}</Text>
+                <Text color={b.color} bold wrap="truncate">{b.word.rest}</Text>
+              </Box>
+            ) : (
+              <Text color={b.color} bold wrap="truncate">{`✦ ${b.title}`}</Text>
+            )}
+            {b.detail ? <Text dimColor wrap="truncate">{b.detail}</Text> : null}
+            <Box key={`${b.key}-actions`} flexDirection="row" flexWrap="wrap" justifyContent="flex-end" columnGap={1} alignItems="center">
+              {b.buttons as RenderChildren}
+            </Box>
+          </Box>
+          {art}
+        </Box>
+        {rows}
+      </Box>
+    )
+  }
   return (
     <Box key={`${b.key}-col`} flexDirection="column">
       <Box key={b.key} flexDirection="row" gap={1} alignItems="center" paddingX={1} backgroundColor={b.bg} borderStyle="round" borderColor={b.edge}>
@@ -1222,7 +1252,7 @@ async function terminalBand($: EngineInterface, e: RenderInput<'AbovePrompt'>, b
           </Box>
           <Text dimColor wrap="truncate">{b.detail}</Text>
         </Box>
-        {bandArt($, e, b.kind)}
+        {art}
       </Box>
       {rows}
     </Box>

@@ -1,5 +1,10 @@
 [
   {
+    "version": "1.1.1",
+    "date": "2026-10-12",
+    "note": "Fit the terminal bar to narrow windows; document the crew row"
+  },
+  {
     "version": "1.1.0",
     "date": "2026-10-12",
     "note": "CGP Crew shows in the band",

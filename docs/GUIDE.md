@@ -1,6 +1,6 @@
 # CGP Effort guide
 
-Version 1.1.0, updated 2026-10-12. This guide describes that version; a newer plugin may differ in details.
+Version 1.1.1, updated 2026-10-12. This guide describes that version; a newer plugin may differ in details.
 
 This is the reference for CGP Effort, a Claude Code plugin by Crypto Gameplan. An agent that is asked how the plugin works should answer from this file. Names in quotes are the words the person sees in the app, so they can find them.
 
@@ -93,6 +93,21 @@ Hovering over the effort or the cache countdown shows a short explanation.
 
 Settings, "Customize", "Look" switches between the bar ("Dashboard") and "Minimal", which shows only small buttons in the footer.
 
+## With CGP Crew
+
+[CGP Crew](https://github.com/crypto-gameplan/cgp-crew) is a separate Crypto Gameplan plugin: you give a coding job to `/cgp-crew` and the session leads five worker agents through it. When both plugins are installed and the look is "Dashboard", a running crew shows in a row above the bar instead of a bar of its own:
+
+| In the crew row | Meaning |
+|---|---|
+| ✦ CGP Crew | The row belongs to the crew, not to the effort. |
+| CSV export | The crew job's title. |
+| Reviewing 1/3 | Where the lead stands, with the accepted tasks out of all tasks. |
+| The track | One segment per task in its role's colour: full once accepted, pulsing while a worker is on it, faint while it waits for review, red when a run failed. |
+| Crew 3 | Opens the crew panel, with every worker, its model, progress, cost and time. |
+| ✕ | Hides the row until the crew reports again. |
+
+The row disappears when no crew runs. With the look set to "Minimal", or without CGP Crew 1.1 or later, CGP Crew draws its own bar as before.
+
 ## Prompt cache and cold chats
 
 Every request rereads the whole chat. Anthropic serves the repeated part from a prompt cache at a fraction of the price, but only while the cache is warm. It lives for one hour after the last request in most Claude Code use, sometimes five minutes. The countdown shows the time left.
@@ -176,7 +191,7 @@ The judge costs a small number of Haiku tokens per prompt, and the handoff advic
 
 ## The terminal
 
-The plugin draws in the terminal too, with small pixel art in its alerts. Below 90 columns the art is left out. If `/cgp-effort` says the plugin is not loaded after a restart, add this to `~/.claude/settings.json` and restart:
+The plugin draws in the terminal too, with small pixel art in its alerts. Below 90 columns the art is left out. When the terminal is too narrow for the bar's text and its buttons on one line, the buttons move to a second line inside the bar. If `/cgp-effort` says the plugin is not loaded after a restart, add this to `~/.claude/settings.json` and restart:
 
 ```json
 { "env": { "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1" } }

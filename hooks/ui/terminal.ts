@@ -34,3 +34,26 @@ export function dashboardLines(d: {
     detail: [d.reason, last].filter(Boolean).join(' · '),
   }
 }
+
+/**
+ * Columns a row of terminal buttons takes: a filled button draws `[ label ]`, a plain one its label alone, with one
+ * column between buttons. Anything that is not a labelled Button (a wrapper Box) counts as a generous 12.
+ */
+export function buttonsWidth(buttons: readonly unknown[]): number {
+  const widths = buttons.map(b => {
+    const props = (b as { type?: unknown; props?: { label?: unknown; plain?: unknown } } | null)?.props
+    if (!props || typeof props.label !== 'string') return 12
+    return [...props.label].length + (props.plain ? 0 : 4)
+  })
+  return widths.reduce((sum, w) => sum + w, 0) + Math.max(0, widths.length - 1)
+}
+
+/**
+ * True when the band's title and its buttons fit on one row of `columns`: the round border and padding take 4, the
+ * title and the buttons keep at least two columns apart, and art on the right takes its width and a gap.
+ */
+export function bandFitsOneRow(columns: number, title: string, buttons: readonly unknown[], artColumns = 0): boolean {
+  if (!columns) return true
+  const art = artColumns > 0 ? artColumns + 1 : 0
+  return 4 + [...title].length + 2 + buttonsWidth(buttons) + art <= columns
+}

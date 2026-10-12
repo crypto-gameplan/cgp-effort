@@ -73,6 +73,11 @@ ran and what it took.
 
 **Animations** can be switched off in Settings → Customize: the bar and its alerts then stand still.
 
+**With [CGP Crew](https://github.com/crypto-gameplan/cgp-crew)** installed, a running crew shows in a row above the bar:
+its title, where the lead stands ("Reviewing 1/3"), one segment per task in its role's colour, a Crew button that
+opens the crew panel and a ✕ that hides the row. Without a running crew the row is gone. In the Minimal look CGP Crew
+draws its own bar instead.
+
 The bar also warns when the cache has gone cold on a big chat, when the context is getting full, when a 5-hour or weekly
 limit passes 80% (with a Save mode that caps effort at Medium), and when the judge stops answering.
 
@@ -106,7 +111,8 @@ CGP Effort draws in the terminal too. If `/cgp-effort` says the plugin is not lo
 { "env": { "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1" } }
 ```
 
-Below 90 columns the bands leave their art out.
+Below 90 columns the bands leave their art out. In a terminal too narrow for the bar's text and its buttons on one
+line, the buttons move to a second line inside the bar.
 
 ## Commands
 
