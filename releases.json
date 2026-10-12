@@ -1,5 +1,10 @@
 [
   {
+    "version": "1.0.1",
+    "date": "2026-10-12",
+    "note": "Show a running CGP Crew in a row of the band"
+  },
+  {
     "version": "1.0.0",
     "date": "2026-10-12",
     "note": "First release of CGP Effort",

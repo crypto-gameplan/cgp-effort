@@ -132,6 +132,21 @@ export type FileTouch = {
   imports: string[]
 }
 
+/**
+ * The crew bar the cgp-crew plugin hands over, ready to draw (its own contract has the same shape). Drawn in the
+ * crew row above the dashboard while a crew runs; cgp-crew then leaves out its own bar.
+ */
+export type CrewFeed = {
+  v: number
+  title: string
+  status: string
+  segments: { title: string; color: string; state: 'accepted' | 'delivered' | 'active' | 'trouble' | 'waiting' }[]
+  share: number
+  crew: number
+  isWorking: boolean
+  isFinished: boolean
+}
+
 declare module 'claude-code' {
   interface PluginState {
     'cgp-effort': {
@@ -220,6 +235,14 @@ declare module 'claude-code' {
       agentSteps: ProgressStep[] | null
       /** The module (folder) opened in the panel's list, or null. */
       agentsModule: string | null
+      /** Tells cgp-crew that this band shows its feed (`draws`), in feed format `v`, so it leaves out its own bar. */
+      crewHost: { v: number; draws: boolean } | null
+      /** The last press in the crew row, for cgp-crew to carry out; `id` grows with each press. */
+      crewRequest: { id: number; action: 'panel' | 'hide' } | null
+    }
+    'cgp-crew': {
+      /** cgp-crew's own value, read here: its bar, or null while no crew flow is shown. */
+      feed: CrewFeed | null
     }
   }
 }

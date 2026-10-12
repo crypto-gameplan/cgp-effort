@@ -28,6 +28,7 @@ import { coldGlowSvg, JUDGE_FADE_MS, JUDGE_GLOW_MAX, JUDGE_PIECE_MS, JUDGE_RISE_
 import { CARD_CLOSE_HOVER, COMPACT_CARD_MS, inPhase, INTRO_MS, kTokens, markTitle, ringSvg, rowIconSvg, SETTINGS_BODY_H, settingsSvg } from './ui/kit'
 import { BIAS_WORDS, CARDS, CONFIGURE_COMMAND, ICON_EFFORT, ICON_HANDOFF, ICON_JUDGE, ICON_SHOW, MODEL_CHOICES, SAVED_CARD_MS, type SettingsCard } from './ui/settings'
 import { LEAN_STOPS, setupBack, setupCounter, setupNext, setupShown, type SetupStep } from './ui/setup'
+import { CREW_FEED_VERSION, crewFeedShows, crewRow } from './ui/crew'
 import { dashboardLines, type TerminalBand } from './ui/terminal'
 
 let ACCENT = accent()
@@ -127,6 +128,10 @@ const agentsModule = atom({ plugin: 'cgp-effort', key: 'agentsModule' } as const
 // Save mode: Auto caps at medium until this time (ms), when the limit resets.
 const saveUntil = atom({ plugin: 'cgp-effort', key: 'saveUntil' } as const, null)
 const isColdHidden = atom({ plugin: 'cgp-effort', key: 'isColdHidden' } as const, false)
+// The crew row (ui/crew.tsx): this band tells cgp-crew it shows the crew, reads the crew's feed, and passes presses back.
+const crewHost = atom({ plugin: 'cgp-effort', key: 'crewHost' } as const, null)
+const crewRequest = atom({ plugin: 'cgp-effort', key: 'crewRequest' } as const, null)
+const crewFeed = atom({ plugin: 'cgp-crew', key: 'feed' } as const, null)
 const setupStep = atom({ plugin: 'cgp-effort', key: 'setupStep' } as const, null)
 // Saved in one go at Done or ✕: each saved setting reloads the plugin and posts a notice in the chat.
 const setupDraft = atom({ plugin: 'cgp-effort', key: 'setupDraft' } as const, {})
@@ -854,6 +859,17 @@ async function openPluginSettings($: EngineInterface) {
   await $.store.set('openSettingsAt', { at: Date.now(), session: await $.session.id().catch(() => '') })
   $.ui.invalidate('ui.render')
 }
+/** Tells cgp-crew whether this band shows its feed: only the dashboard look has a band to show it in. */
+async function announceCrewHost($: EngineInterface) {
+  const draws = config.layout === 'default'
+  const now = await read($, crewHost)
+  if (!now || now.v !== CREW_FEED_VERSION || now.draws !== draws) await update($, crewHost, () => ({ v: CREW_FEED_VERSION, draws }))
+}
+
+async function askCrew($: EngineInterface, action: 'panel' | 'hide') {
+  await update($, crewRequest, prev => ({ id: (prev?.id ?? 0) + 1, action }))
+}
+
 async function saveSetting($: EngineInterface, field: keyof typeof SETTING_FIELDS, value: string) {
   const { deny } = await $.config
     .set({ key: `cgp-effort.${SETTING_FIELDS[field]}`, value })
@@ -887,6 +903,7 @@ async function saveSetting($: EngineInterface, field: keyof typeof SETTING_FIELD
   }
   config = { ...readConfig(raw), typesafeKey: config.typesafeKey }
   applyTheme()
+  await announceCrewHost($).catch(() => undefined)
   $.ui.invalidate('ui.render')
 }
 function savedCardTree($: EngineInterface, e: RenderInput<'AbovePrompt'>) {
@@ -2153,6 +2170,7 @@ export const register: Register = (on, options) => {
       storedAuto === false && storedPick && EFFORTS.includes(storedPick.effort) ? update($, pick, () => storedPick).then(() => { pickCarried = true }) : null,
       setupDone !== true ? update($, setupStep, () => 'pick').then(() => update($, setupPending, () => true)) : null,
     ])
+    await announceCrewHost($).catch(() => undefined)
     // Makes plain /cgp-effort the mod's own command instead of the command file run as a skill.
     void $.command.register({ name: 'cgp-effort', description: 'CGP Effort: settings, debug, handoff, setup, bench, auto, stats.' }).catch(() => undefined)
     void $.fs.read(`${$.plugin.root}/.claude-plugin/plugin.json`).then(t => { ownVersion = String(JSON.parse(String(t)).version ?? '') }).catch(() => undefined)
@@ -3588,11 +3606,33 @@ Saved to ${out}.md and .json` }
       )
     }
     if (config.layout === 'default') {
-      if (e.surface === 'terminal') return dashboardBand($, e)
+      // While cgp-crew runs a crew, its bar sits in a row above the dashboard instead of in a band of its own.
+      const feed = await read($, crewFeed)
+      const crew = crewFeedShows(feed)
+        ? crewRow(feed, {
+            Box,
+            Text,
+            Button,
+            Svg: e.surface === 'desktop' ? Svg : undefined,
+            columns: typeof e.props.bodyColumns === 'number' ? e.props.bodyColumns : 100,
+            onPanel: () => askCrew($, 'panel'),
+            onHide: () => askCrew($, 'hide'),
+          })
+        : null
+      if (e.surface === 'terminal') {
+        const dash = await dashboardBand($, e)
+        return crew ? (
+          <Box key="dash-col" flexDirection="column">
+            {crew}
+            {dash}
+          </Box>
+        ) : dash
+      }
       const { question } = await effortRows($, e)
       const dash = await dashboardBand($, e)
-      return question ? (
+      return question || crew ? (
         <Box key="dash-col" flexDirection="column">
+          {crew}
           {question}
           {dash}
         </Box>
