@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       # The version the mod was last checked against; raise it when Claude Code's plugin API moves on.
       - run: npm install -g @anthropic-ai/claude-code@2.1.296
       - run: claude plugin validate .
